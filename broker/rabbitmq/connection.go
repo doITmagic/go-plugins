@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	DefaultExchange  = "micro"
+	DefaultExchange  = "doitmagic"
 	DefaultRabbitURL = "amqp://guest:guest@127.0.0.1:5672"
 
 	dial    = amqp.Dial
