@@ -54,9 +54,9 @@ func newRabbitMQConn(exchange string, urls []string) *rabbitMQConn {
 	}
 }
 
-func (r *rabbitMQConn) connect(secure bool, config *tls.Config) error {
+func (r *rabbitMQConn) connect(secure bool, config *tls.Config,durable bool,autoDelete bool, internal bool,noWait bool) error {
 	// try connect
-	if err := r.tryConnect(secure, config); err != nil {
+	if err := r.tryConnect(secure, config,durable,autoDelete,internal,noWait); err != nil {
 		return err
 	}
 
@@ -66,18 +66,18 @@ func (r *rabbitMQConn) connect(secure bool, config *tls.Config) error {
 	r.Unlock()
 
 	// create reconnect loop
-	go r.reconnect(secure, config)
+	go r.reconnect(secure, config,durable,autoDelete,internal,noWait)
 	return nil
 }
 
-func (r *rabbitMQConn) reconnect(secure bool, config *tls.Config) {
+func (r *rabbitMQConn) reconnect(secure bool, config *tls.Config, durable bool,autoDelete bool, internal bool,noWait bool) {
 	// skip first connect
 	var connect bool
 
 	for {
 		if connect {
 			// try reconnect
-			if err := r.tryConnect(secure, config); err != nil {
+			if err := r.tryConnect(secure, config,durable,autoDelete,internal,noWait); err != nil {
 				time.Sleep(1 * time.Second)
 				continue
 			}
@@ -104,7 +104,7 @@ func (r *rabbitMQConn) reconnect(secure bool, config *tls.Config) {
 	}
 }
 
-func (r *rabbitMQConn) Connect(secure bool, config *tls.Config) error {
+func (r *rabbitMQConn) Connect(secure bool, config *tls.Config, durable bool,autoDelete bool, internal bool,noWait bool) error {
 	r.Lock()
 
 	// already connected
@@ -124,7 +124,7 @@ func (r *rabbitMQConn) Connect(secure bool, config *tls.Config) error {
 
 	r.Unlock()
 
-	return r.connect(secure, config)
+	return r.connect(secure, config,durable,autoDelete,internal,noWait)
 }
 
 func (r *rabbitMQConn) Close() error {
@@ -142,7 +142,7 @@ func (r *rabbitMQConn) Close() error {
 	return r.Connection.Close()
 }
 
-func (r *rabbitMQConn) tryConnect(secure bool, config *tls.Config) error {
+func (r *rabbitMQConn) tryConnect(secure bool, config *tls.Config, durable bool,autoDelete bool, internal bool,noWait bool) error {
 	var err error
 
 	if secure || config != nil || strings.HasPrefix(r.url, "amqps://") {
@@ -166,34 +166,34 @@ func (r *rabbitMQConn) tryConnect(secure bool, config *tls.Config) error {
 		return err
 	}
 
-	r.Channel.DeclareExchange(r.exchange)
+	r.Channel.DeclareExchange(r.exchange,durable,autoDelete,internal,noWait)
 	r.ExchangeChannel, err = newRabbitChannel(r.Connection)
 
 	return err
 }
 
-func (r *rabbitMQConn) Consume(queue, key string, headers amqp.Table, autoAck, durableQueue bool) (*rabbitMQChannel, <-chan amqp.Delivery, error) {
+func (r *rabbitMQConn) Consume(queue, key string, headers amqp.Table, autoAck, durableQueue bool,autoDelete bool,exclusive bool, noLocal bool, noWait bool) (*rabbitMQChannel, <-chan amqp.Delivery, error) {
 	consumerChannel, err := newRabbitChannel(r.Connection)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	if durableQueue {
-		err = consumerChannel.DeclareDurableQueue(queue)
+		err = consumerChannel.DeclareDurableQueue(queue,autoDelete,exclusive,noWait)
 	} else {
-		err = consumerChannel.DeclareQueue(queue)
+		err = consumerChannel.DeclareQueue(queue,durableQueue,autoDelete,exclusive,noWait)
 	}
 
 	if err != nil {
 		return nil, nil, err
 	}
 
-	deliveries, err := consumerChannel.ConsumeQueue(queue, autoAck)
+	deliveries, err := consumerChannel.ConsumeQueue(queue, autoAck,exclusive,noLocal,noWait)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	err = consumerChannel.BindQueue(queue, key, r.exchange, headers)
+	err = consumerChannel.BindQueue(queue, key, r.exchange, headers,noWait)
 	if err != nil {
 		return nil, nil, err
 	}

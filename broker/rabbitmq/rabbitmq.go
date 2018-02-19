@@ -29,7 +29,7 @@ type publication struct {
 }
 
 func init() {
-	cmd.DefaultBrokers["rabbitmq"] = NewBroker
+	cmd.DefaultBrokers["rabbitmq"] = broker.NewBroker
 }
 
 func (p *publication) Ack() error {
@@ -73,7 +73,7 @@ func (r *rbroker) Publish(topic string, msg *broker.Message, opts ...broker.Publ
 	return r.conn.Publish(r.conn.exchange, topic, m)
 }
 
-func (r *rbroker) Subscribe(topic string, handler broker.Handler, opts ...broker.SubscribeOption) (broker.Subscriber, error) {
+func (r *rbroker) Subscribe(topic string, handler broker.Handler,autoDelete bool,exclusive bool, noLocal bool, noWait bool, opts ...broker.SubscribeOption,) (broker.Subscriber, error) {
 	opt := broker.SubscribeOptions{
 		AutoAck: true,
 	}
@@ -104,6 +104,10 @@ func (r *rbroker) Subscribe(topic string, handler broker.Handler, opts ...broker
 		headers,
 		opt.AutoAck,
 		durableQueue,
+		autoDelete,
+		exclusive,
+		noLocal,
+		noWait,
 	)
 	if err != nil {
 		return nil, err
@@ -152,11 +156,11 @@ func (r *rbroker) Init(opts ...broker.Option) error {
 	return nil
 }
 
-func (r *rbroker) Connect() error {
+func (r *rbroker) Connect(durable bool,autoDelete bool,internal bool, noWait bool) error {
 	if r.conn == nil {
 		r.conn = newRabbitMQConn(r.getExchange(), r.opts.Addrs)
 	}
-	return r.conn.Connect(r.opts.Secure, r.opts.TLSConfig)
+	return r.conn.Connect(r.opts.Secure, r.opts.TLSConfig,durable,autoDelete,internal,noWait)
 }
 
 func (r *rbroker) Disconnect() error {
@@ -166,20 +170,7 @@ func (r *rbroker) Disconnect() error {
 	return r.conn.Close()
 }
 
-func NewBroker(opts ...broker.Option) broker.Broker {
-	options := broker.Options{
-		Context: context.Background(),
-	}
 
-	for _, o := range opts {
-		o(&options)
-	}
-
-	return &rbroker{
-		addrs: options.Addrs,
-		opts:  options,
-	}
-}
 
 func (r *rbroker) getExchange() string {
 	if e, ok := r.opts.Context.Value(exchangeKey{}).(string); ok {

@@ -56,72 +56,72 @@ func (r *rabbitMQChannel) Publish(exchange, key string, message amqp.Publishing)
 	return r.channel.Publish(exchange, key, false, false, message)
 }
 
-func (r *rabbitMQChannel) DeclareExchange(exchange string) error {
+func (r *rabbitMQChannel) DeclareExchange(exchange string,durable bool,autoDelete bool, internal bool,noWait bool) error {
 	return r.channel.ExchangeDeclare(
 		exchange, // name
 		"topic",  // kind
-		false,    // durable
-		false,    // autoDelete
-		false,    // internal
-		false,    // noWait
+		durable,    // durable
+		autoDelete,    // autoDelete
+		internal,    // internal
+		noWait,    // noWait
 		nil,      // args
 	)
 }
 
-func (r *rabbitMQChannel) DeclareQueue(queue string) error {
+func (r *rabbitMQChannel) DeclareQueue(queue string,durable bool,autoDelete bool,exclusive bool,noWait bool) error {
 	_, err := r.channel.QueueDeclare(
 		queue, // name
-		false, // durable
-		true,  // autoDelete
-		false, // exclusive
-		false, // noWait
+		durable, // durable
+		autoDelete,  // autoDelete
+		exclusive, // exclusive
+		noWait, // noWait
 		nil,   // args
 	)
 	return err
 }
 
-func (r *rabbitMQChannel) DeclareDurableQueue(queue string) error {
+func (r *rabbitMQChannel) DeclareDurableQueue(queue string,autoDelete bool,exclusive bool,noWait bool) error {
 	_, err := r.channel.QueueDeclare(
 		queue, // name
 		true,  // durable
-		false, // autoDelete
-		false, // exclusive
-		false, // noWait
+		autoDelete,  // autoDelete
+		exclusive, // exclusive
+		noWait, // noWait
 		nil,   // args
 	)
 	return err
 }
 
-func (r *rabbitMQChannel) DeclareReplyQueue(queue string) error {
+func (r *rabbitMQChannel) DeclareReplyQueue(queue string,durable bool,autoDelete bool,exclusive bool,noWait bool) error {
 	_, err := r.channel.QueueDeclare(
 		queue, // name
-		false, // durable
-		true,  // autoDelete
-		true,  // exclusive
-		false, // noWait
+		durable, // durable
+		autoDelete,  // autoDelete
+		exclusive,  // exclusive
+		noWait, // noWait
 		nil,   // args
 	)
 	return err
 }
 
-func (r *rabbitMQChannel) ConsumeQueue(queue string, autoAck bool) (<-chan amqp.Delivery, error) {
+func (r *rabbitMQChannel) ConsumeQueue(queue string, autoAck bool,exclusive bool, noLocal bool, noWait bool) (<-chan amqp.Delivery, error) {
 	return r.channel.Consume(
 		queue,   // queue
 		r.uuid,  // consumer
 		autoAck, // autoAck
-		false,   // exclusive
-		false,   // nolocal
-		false,   // nowait
+		exclusive,   // exclusive
+		noLocal,   // nolocal
+		noWait,   // nowait
 		nil,     // args
 	)
 }
 
-func (r *rabbitMQChannel) BindQueue(queue, key, exchange string, args amqp.Table) error {
+func (r *rabbitMQChannel) BindQueue(queue, key, exchange string, args amqp.Table,noWait bool) error {
 	return r.channel.QueueBind(
 		queue,    // name
 		key,      // key
 		exchange, // exchange
-		false,    // noWait
+		noWait,    // noWait
 		args,     // args
 	)
 }
