@@ -57,6 +57,7 @@ func (r *rabbitMQChannel) Publish(exchange, key string, message amqp.Publishing)
 }
 
 func (r *rabbitMQChannel) DeclareExchange(exchange string,durable bool,autoDelete bool, internal bool,noWait bool) error {
+
 	return r.channel.ExchangeDeclare(
 		exchange, // name
 		"topic",  // kind

@@ -10,6 +10,8 @@ import (
 	"golang.org/x/net/context"
 )
 
+var Broker rbroker
+
 type rbroker struct {
 	conn  *rabbitMQConn
 	addrs []string
@@ -30,7 +32,9 @@ type publication struct {
 }
 
 func init() {
-	cmd.DefaultBrokers["rabbitmq"] = NewBroker
+
+	Broker = rbroker{}
+	//cmd.DefaultBrokers["rabbitmq"] = NewBroker
 }
 
 func (p *publication) Ack() error {
@@ -61,6 +65,7 @@ func (r *rbroker) Publish(topic string, msg *broker.Message, opts ...broker.Publ
 	m := amqp.Publishing{
 		Body:    msg.Body,
 		Headers: amqp.Table{},
+		DeliveryMode:1,
 	}
 
 	for k, v := range msg.Header {
@@ -135,7 +140,7 @@ func (r *rbroker) Subscribe(topic string, handler broker.Handler, opts ...broker
 	return &subscriber{ch: ch, topic: topic, opts: opt}, nil
 }
 
-func NewBroker(opts ...broker.Option) broker.Broker {
+/*func NewBroker(opts ...broker.Option) broker.Broker {
 	options := broker.Options{
 		Context: context.Background(),
 	}
@@ -149,7 +154,7 @@ func NewBroker(opts ...broker.Option) broker.Broker {
 		opts:  options,
 		autoDelete:false,
 	}
-}
+}*/
 
 func (r *rbroker) Options() broker.Options {
 	return r.opts
@@ -173,11 +178,11 @@ func (r *rbroker) Init(opts ...broker.Option) error {
 	return nil
 }
 
-func (r *rbroker) Connect() error {
+func (r *rbroker) Connect(durable bool,autoDelete bool, internal bool, noWait bool) error {
 	if r.conn == nil {
-		r.conn = newRabbitMQConn(r.getExchange(), r.opts.Addrs)
+		r.conn = NewRabbitMQConn(r.getExchange(), r.opts.Addrs)
 	}
-	return r.conn.Connect(r.opts.Secure, r.opts.TLSConfig,false,false,false,false)
+	return r.conn.Connect(r.opts.Secure, r.opts.TLSConfig,durable,autoDelete,internal,noWait)
 }
 
 func (r *rbroker) Disconnect() error {
@@ -186,7 +191,6 @@ func (r *rbroker) Disconnect() error {
 	}
 	return r.conn.Close()
 }
-
 
 
 func (r *rbroker) getExchange() string {

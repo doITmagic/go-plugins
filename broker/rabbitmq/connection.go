@@ -34,7 +34,7 @@ type rabbitMQConn struct {
 	close     chan bool
 }
 
-func newRabbitMQConn(exchange string, urls []string) *rabbitMQConn {
+func NewRabbitMQConn(exchange string, urls []string) *rabbitMQConn {
 	var url string
 
 	if len(urls) > 0 && regexp.MustCompile("^amqp(s)?://.*").MatchString(urls[0]) {
